@@ -46,7 +46,8 @@ transactions.
 3. Booking details are hashed using SHA-256 (NIST, 2015) and stored on-chain
 4. Funds are held in escrow until check-in confirmation
 5. Hotel confirms check-in → smart contract releases funds instantly
-6. If hotel fails to confirm or cancels → automatic refund with penalty
+6. If the guest cancels before check-in → full refund returned automatically
+   to the guest's wallet
 
 This architecture aligns with Szabo's (1997) original concept of smart
 contracts as self-executing agreements with the terms directly written
