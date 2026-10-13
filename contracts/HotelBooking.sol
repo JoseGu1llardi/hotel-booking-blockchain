@@ -125,4 +125,59 @@ contract HotelBooking {
             booking.isCheckedIn
         );
     }
+
+        // ==========================================
+    // 6. CORE FUNCTIONS: CREATE BOOKING
+    // ==========================================
+    
+    /**
+     * @dev Creates a new booking between a guest and a hotel.
+     * @param _hotel The address of the hotel (Receiver).
+     * @param _bookingDetails A string containing booking details (e.g., "Room 101, 2026-11-15").
+     * @notice The guest must send ETH with this transaction (msg.value > 0).
+     * @notice Booking details are hashed using SHA-256 to guarantee data integrity.
+     */
+    function createBooking(address _hotel, string memory _bookingDetails) 
+        public 
+        payable 
+    {
+        // 1. CHECKS: Validate inputs to prevent errors and save gas
+        require(_hotel != address(0), "Invalid hotel address");
+        require(_hotel != msg.sender, "Guest and hotel cannot be the same address");
+        require(msg.value > 0, "Payment amount must be greater than zero");
+        
+        // 2. DATA INTEGRITY: Generate SHA-256 hash of the booking details
+        // We pack the details, sender, receiver, amount, and timestamp to ensure 
+        // this specific booking is unique and cannot be tampered with.
+        bytes32 hashDetails = sha256(
+            abi.encodePacked(
+                _bookingDetails, 
+                msg.sender, 
+                _hotel, 
+                msg.value, 
+                block.timestamp
+            )
+        );
+        
+        // 3. EFFECTS: Update the state
+        bookingCounter++;
+        
+        bookings[bookingCounter] = Booking({
+            guest: msg.sender,           // Authenticated via ECDSA (MetaMask signature)
+            hotel: _hotel,
+            amount: msg.value,
+            timestamp: block.timestamp,
+            bookingHash: hashDetails,    // SHA-256 ensures integrity
+            isActive: true,
+            isCheckedIn: false
+        });
+        
+        // 4. INTERACTIONS: Emit event for off-chain tracking
+        emit BookingCreated(
+            bookingCounter, 
+            msg.sender, 
+            _hotel, 
+            msg.value
+        );
+    }
 }
