@@ -180,4 +180,36 @@ contract HotelBooking {
             msg.value
         );
     }
+
+    // ==========================================
+    // 7. ESCROW LOGIC: CONFIRM CHECK-IN
+    // ==========================================
+    
+    /**
+     * @dev Allows the hotel to confirm a guest's check-in and receive funds.
+     * @param _bookingId The unique ID of the booking to confirm.
+     * @notice Only the registered hotel address can call this function.
+     * @notice Funds are released immediately upon successful check-in.
+     */
+    function confirmCheckIn(uint256 _bookingId) public {
+        Booking storage booking = bookings[_bookingId];
+
+        // 1. CHECKS: Validate conditions
+        require(_bookingId > 0 && _bookingId <= bookingCounter, "Invalid booking ID");
+        require(msg.sender == booking.hotel, "Only the hotel can confirm check-in");
+        require(booking.isActive, "Booking is not active");
+        require(!booking.isCheckedIn, "Check-in already confirmed");
+
+        uint256 amountToRelease = booking.amount;
+
+        // 2. EFFECTS: Update state BEFORE transferring funds (Prevents Reentrancy)
+        booking.isActive = false;
+        booking.isCheckedIn = true;
+
+        // 3. INTERACTIONS: Transfer funds to the hotel
+        (bool success, ) = payable(booking.hotel).call{value: amountToRelease}("");
+        require(success, "ETH transfer to hotel failed");
+
+        emit CheckInCompleted(_bookingId, booking.hotel, amountToRelease);
+    }
 }
