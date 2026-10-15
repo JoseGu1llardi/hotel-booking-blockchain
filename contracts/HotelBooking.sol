@@ -212,4 +212,35 @@ contract HotelBooking {
 
         emit CheckInCompleted(_bookingId, booking.hotel, amountToRelease);
     }
+
+    // ==========================================
+    // 8. ESCROW LOGIC: CANCEL BOOKING
+    // ==========================================
+    
+    /**
+     * @dev Allows the guest to cancel a booking and receive a full refund.
+     * @param _bookingId The unique ID of the booking to cancel.
+     * @notice Only the guest who made the booking can cancel it.
+     * @notice Cancellation is only allowed before check-in is confirmed.
+     */
+    function cancelBooking(uint256 _bookingId) public {
+        Booking storage booking = bookings[_bookingId];
+
+        // 1. CHECKS
+        require(_bookingId > 0 && _bookingId <= bookingCounter, "Invalid booking ID");
+        require(msg.sender == booking.guest, "Only the guest can cancel");
+        require(booking.isActive, "Booking is not active");
+        require(!booking.isCheckedIn, "Cannot cancel after check-in");
+
+        uint256 amountToRefund = booking.amount;
+
+        // 2. EFFECTS: Update state BEFORE refunding
+        booking.isActive = false;
+
+        // 3. INTERACTIONS: Refund the guest
+        (bool success, ) = payable(booking.guest).call{value: amountToRefund}("");
+        require(success, "ETH refund to guest failed");
+
+        emit BookingCancelled(_bookingId, booking.guest, amountToRefund);
+    }
 }
